@@ -26,7 +26,7 @@ image:
 //代码片段
 int main(){
   hello world;
-    mnaib
+    mnaibasdsad
 }
 ```
 
