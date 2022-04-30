@@ -8,7 +8,7 @@ author: 湾区书记汤姆
 
 toc: true
 comments: true
-typora-root-url: ../../tomstillcoding.github.io
+typora-root-url: ../../Sterben-01.github.io
 math: false
 mermaid: true
 
@@ -26,6 +26,7 @@ image:
 //代码片段
 int main(){
   hello world;
+    mnaib
 }
 ```
 
