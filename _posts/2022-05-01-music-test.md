@@ -23,7 +23,8 @@ mermaid: true
 首先找到网易云的外链生成，这里不多说了。生成了的外链大概长这样
 
 ```html
-<iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width=330 height=86 src="//music.163.com/outchain/player?type=2&id=28723836&auto=1&height=66"></iframe>
+<iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width=330 height=86
+        src="//music.163.com/outchain/player?type=2&id=28723836&auto=1&height=66"></iframe>
 ```
 
 这里有几个雷区：
@@ -39,6 +40,7 @@ mermaid: true
 修改后的链接大概长这样
 
 ```html
-<iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width="330" height="86" src="//music.163.com/outchain/player?type=2&id=28723836&auto=1&height=66"> </iframe>
+<iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width="330" height="86"
+        src="//music.163.com/outchain/player?type=2&id=28723836&auto=1&height=66"> </iframe>
 ```
 
