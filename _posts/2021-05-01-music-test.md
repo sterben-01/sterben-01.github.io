@@ -27,12 +27,3 @@ Error: Process completed with exit code 128.
 结果折腾了五个小时偶然间发现我的仓库的Workflow permission 是tm只读的。赶紧改过来了。
 
 音乐测试
-
-```
-{::nomarkdown}
-<iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width=330 height=86 src="//music.163.com/outchain/player?type=2&id=28723836&auto=0&height=66"></iframe>
-{:/nomarkdown}
-```
-
-
-
