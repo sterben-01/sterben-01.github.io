@@ -1,6 +1,6 @@
 ---
 title: 太脑瘫了！
-date: 2022-04-30 05:34:00 -0500
+date: 2022-05-01 02:00:00 -0500
 categories: [随笔]
 tags: [生活]
 pin: false
@@ -11,6 +11,7 @@ comments: true
 typora-root-url: ../../Sterben-01.github.io
 math: false
 mermaid: true
+music-id:28723836
 
 ---
 
@@ -26,4 +27,7 @@ Error: Process completed with exit code 128.
 
 结果折腾了五个小时偶然间发现我的仓库的Workflow permission 是tm只读的。赶紧改过来了。
 
-![微信图片_20220430053643](/assets/blog_res/2021-04-30-new.assets/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20220430053643.png)
+音乐测试
+
+<iframe frameborder="no" border="0" marginwidth="0" marginheight="0" width=330 height=86 src="//music.163.com/outchain/player?type=2&id={{page.music-id}}&auto=0&height=66"></iframe>
+
