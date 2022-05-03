@@ -31,7 +31,7 @@ mermaid: true
 
 1：需要修改`width=330 height=86`为 `width="330" height="86"`
 
-2：链接前面不要加http也不要加https，会自动解析
+2：链接前面不要加http也不要加https，会自动解析。
 
 3：最后面一个`<\iframe>`要和前面的`>`中间隔一个空格。
 
