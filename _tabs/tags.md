@@ -6,17 +6,16 @@ order: 2
 ---
 
 ```HTML
-<div>
-  <h1>Articles tagged with ""</h1>
-  <ul style='padding-top: 16px;'>
-  
-  {% for post in site.posts %}
-    {% if post.tags contains page.tag-name %}
-      <li><a href="{{ post.url }}">{{ post.title }}</a>, published {{ post.date | date: "%Y-%m-%d" }}</li>
-    {% endif %}
-  {% endfor %}
-  
-  </ul>
+<div class="post">
+<h1>Tag: {{ page.tag }}</h1>
+<ul>
+{% for post in site.tags[page.tag] %}
+  <li><a href="{{ post.url }}">{{ post.title }}</a> ({{ post.date | date_to_string }})<br>
+    {{ post.description }}
+  </li>
+{% endfor %}
+</ul>
 </div>
+<hr>
 ```
 
