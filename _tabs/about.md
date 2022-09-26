@@ -9,4 +9,8 @@ order: 4
   - 🏫 MSc in Computer Science in Vanderbilt.
   - 🖥️ I'm currently studying C++/Go.
   - 🎹 I'm a NetEase Musician and Tencent Musician.
+  
+  
+  
+- 再次特别感谢卡酷大佬对我整理笔记和学习过程中的帮助。大佬的[github地址](https://github.com/kaku-iwate)
 
