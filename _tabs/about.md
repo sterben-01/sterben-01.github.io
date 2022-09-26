@@ -5,8 +5,8 @@ order: 4
 ---
 - ### Hi there 👋, I'm 01!
 
-  - 🏫 BSc in Computer Science in CU Boulder.
-  - 🏫 MSc in Computer Science in Vanderbilt.
+  - 🏫 BSc in Computer Science, CU Boulder.
+  - 🏫 MSc in Computer Science, Vanderbilt.
   - 🖥️ I'm currently studying C++.
   - 🎹 I'm a NetEase Musician and Tencent Musician.
   
