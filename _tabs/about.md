@@ -7,7 +7,7 @@ order: 4
 
   - 🏫 BSc in Computer Science in CU Boulder.
   - 🏫 MSc in Computer Science in Vanderbilt.
-  - 🖥️ I'm currently studying C++/Go.
+  - 🖥️ I'm currently studying C++.
   - 🎹 I'm a NetEase Musician and Tencent Musician.
   
   
