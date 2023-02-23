@@ -162,3 +162,58 @@ void logAndAddImpl(T&& name, std::true_type) {	//如果是整型
 
 我们在杂记3中已经详细讨论过了async的启动方式。我感觉大多数情况下，只要使用了`async`，应该都会使用异步方式启动。但是为了避免意外情况，在这里详细讨论一下，使用默认方式启动可能会遇到的问题。
 
+比如我们有
+
+```c++
+auto fut1 = std::async(f);
+```
+
+- 无法预知`f`是否会和调用线程并发运行，因为`f`可能会被调度为推迟运行。
+- 无法预知`f`是否运行在与调用`fut`的`get`或`wait`函数的线程不同的某线程之上。
+- 连`f`是否会运行这件起码的事情都是无法预知的，这是因为无法保证在程序的每条路径上，`fut`的 `get`或`wait`都会得到调用。
+
+**尤其是针对有`thread_local`变量的情况下，我们无法确认f到底是使用调用线程的`thread_local`变量还是新线程的。**
+
+## 基于future 的 wait_untill /wait_for 的循环以超时为条件的情况下可能导致永远无法退出循环
+
+假设我们有如下代码
+
+```c++
+void f(){
+    //一些操作
+}
+auto fut = async(f); //默认启动条件。表面上的异步运行
+
+while(fut.wait_for(100ms) != std::future_status::ready){ //注意这里
+    //其他操作
+}
+```
+
+- 假设如果`f`和调用线程是并发执行的，也就是`async`真的异步启动了，那么这个操作没什么问题。
+- 但是假设`f`并没有被`async`异步启动，而是采用了推迟执行。由于我们从未对fut调用过`get`或`wait`，则`f`操作永远不会被执行。该`future`对象的状态将永远是`std::launch::deferred`。所以这个`while`永远都不会退出。
+
+### 修正技巧：调用wait_untill 或 wait_for 并检查返回值
+
+比如上面的代码可以修改为这样
+
+```c++
+void f(){
+    //一些操作
+}
+auto fut = async(f); //默认启动条件。表面上的异步运行
+
+if(fut.wait_for(0s) == std::future_status::deferred){ //实际上我们不需要等待任何事情，0s即可。然后查看是否被推迟
+    fut.get();//如果被推迟，就显式的调用get或wait
+}
+else{
+    while(fut.wait_for(100ms) != std::future_status::ready){ //如果未被推迟，确为异步执行。则正确执行。
+    	//其他操作
+	}
+}
+
+```
+
+- 调用`wait_for`中，实际上我们不需要等待任何事情，所以参数为`0s`即可。然后查看是否被推迟。如果被推迟，就显式的调用`get`或`wait`
+
+
+
