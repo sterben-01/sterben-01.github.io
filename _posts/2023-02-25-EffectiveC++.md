@@ -109,3 +109,77 @@ int main(){
 尽管我们可能会说，`same_way_wrapper`依旧实例化了两份。但是我们要知道，真实场景下，`same_way`可能是几十几百行的函数。而`same_way_wrapper`只有一行，几百行和一行相比，这个膨胀率我们是可以接受的。
 
 **继承只是一种实现方式。我们可以换成包含。**
+
+
+
+## 46条：函数模板的类型推导不支持隐式类型转换。所以如果我们在写一个类模板，但是其中有函数需要类型转换的时候，需要写成类内部的`friend`函数。
+
+这一条非常值的拿出来单独一说。这个东西的例子最常见在运算符重载
+
+- 普通类的运算符重载
+
+```c++
+struct myclass{
+    int val = 0;
+    myclass(int x):val(x){};
+    myclass operator+(const myclass& rhs){
+            return myclass(val + rhs.val);
+    }
+};
+//---类外版本----
+// myclass operator+(const myclass& lhs, const myclass& rhs){
+//         return myclass(lhs.val + rhs.val);
+// }
+int main(){
+    myclass obj(200);
+    myclass another = obj+400;
+    cout << another.val << endl;
+}
+```
+
+- 类模板的运算符重载
+
+```c++
+template<typename T>
+struct myTclass{
+    int val = 0;
+    myTclass(int x):val(x){};
+    myTclass operator+(const myTclass& rhs){ //类内版本 OK
+        return myTclass(val + rhs.val);
+    }
+};
+//----类外版本，注意这里是错的-----
+// template<typename T>
+// myTclass<T> operator+(const myTclass<T>& lhs, const myTclass<T>& rhs){
+//     return myTclass<T>(lhs.val + rhs.val);
+// }
+int main(){
+    myTclass<int> obj(200);
+    myTclass<int> another = obj + 400;
+    cout << another.val << endl;
+}
+```
+
+至于运算符重载，尤其是当前是加法的时候，为了满足加法交换律，我们普遍会需要在类外写一个。但是问题来了。我们类内定义的没问题，因为不涉及类型转换。**但是类外的就出问题了。因为如`obj+400`如果和类外的运算符重载进行匹配，`400`是不能被隐式转换成`myTclass<int>(400)`的。**
+
+- `operator+(obj, 400)`这个函数调用从第一个参数可以推导出`T`的类型是`int`，因为第一个参数的类型是`myTclass<int>`。由于在函数签名中，两个参数类型一致，所以期望第二个参数依旧是这个类型。但是突然出现了`int`，这两个参数类型对不上了。又不支持隐式转换。（想不通的话想一下最基础的例子：`max<T>(1,2.2)`为什么也不行）
+
+**所以解决方式是以一个友元函数的身份写在类内即可。**
+
+```c++
+template<typename T>
+struct myTclass{
+    int val = 0;
+    myTclass(int x):val(x){};
+    friend myTclass<T> operator+(const myTclass<T>& lhs, const myTclass<T>& rhs){ //这里的三个<T>都是可以省略的。但是为了清晰，还是加上吧。
+        return myTclass(lhs.val + rhs.val);
+    }
+};
+int main(){
+    myTclass<int> obj(200);
+    myTclass<int> another = obj + 400;
+    cout << another.val << endl;
+}
+```
+
+**这么做之所以可行的原因是这个操作符重载是普通函数，并非函数模板。**它依托于整个类模板。一旦类模板被实例化，则函数也会被合成。所以当`myTclass<int> obj`的执行让`myTclass<int>`类被合成出来的时候，这个函数就已经可见了。然后由于是函数而非函数模板自然支持隐式类型转换。**注意不要因为看到模板类就觉得不可能发生隐式类型转换。编译器通过模板合成出来的类或函数与普通类或函数有同样的行为。**
