@@ -91,3 +91,139 @@ const myclass operator+(int lhs, const myclass&  rhs){
 
 同时，应该以复合形式为基础，实现单独形式 。也就是在`operator+`内部使用`operator+=`。因为这样只需要更改`operator+=`就可以改变其行为。
 
+## 条款26 限制某个class所能产生的对象数量
+
+主要讲了单例模式 和 对象数量计数器。需要计算数量的对象可以继承自对象数量计数器基类。行为有一点像侵入式智能指针。
+
+计数器基类大概长这样**（利用了CRTP）**：
+
+```c++
+template<typename T>
+struct counts{
+    static int count;
+    void increase(){
+        count++;
+    }
+    void decrease(){
+        count--;
+    }
+    static void get(){
+        cout << count << endl;
+    }
+};
+template<typename T>
+int counts<T>::count = 0;
+
+class myobj : counts<myobj>{ //这是一种CRTP。
+    //具体内容  
+};
+class myobjanother : counts<myobjanother>{
+  //具体内容  
+};
+
+```
+
+既可以手动分离处理加减，也可以直接在计数器基类的构造或析构函数中计算加减。一个是手动一个是自动而已。
+
+## 条款27 要求或禁止对象产生在堆中
+
+### 要求对象产生在堆中
+
+- 将对象的析构函数声明为`protected`。如果有继承，则必须要同时声明为`virtual`。
+  - 因为外部无法访问对象的析构函数，则编译器禁止在栈上创建对象
+  - 声明为`protected`而不是`private`的目的是让子类可以访问析构函数。
+  - 注意子类也应该将析构函数声明为`protected`，否则子类对象会被允许创建在栈上。
+  - 注意杂记4中提到的自动储存期限。所以子类如果在栈上，则子类的父类部分也在栈上。子类在堆上，则子类的父类部分也在堆上。
+- 声明一个`destroy`函数，用于调用析构函数。
+  - `destroy`函数是否为`virtual`不重要，因为`delete`会调用对应的`virtual`析构函数。
+
+```c++
+struct myclass{
+
+    myclass(){
+        cout <<"myclass const" << endl;
+    }
+
+    void destroy(){
+        delete this;
+    }
+
+    protected: //protected
+    virtual ~myclass(){ //虚函数
+        cout <<"myclass dest" << endl;
+    }
+};
+
+
+struct derive: public myclass{
+    derive(){
+        cout << "derive const" << endl;
+    }
+    void destroy(){
+        delete this;
+    }
+    protected: //protected
+    ~derive(){
+        cout <<"derive dest" << endl;
+    }
+
+};
+
+
+int main(){
+
+    myclass* p = new myclass();
+    p->destroy();
+    derive* pp = new derive();
+    pp->destroy();
+
+    myclass* ppp = new derive();
+    ppp->destroy();
+
+    myclass pppp; 	//禁止
+    derive ppppp;	//禁止
+    return 0;
+}
+```
+
+
+
+### 禁止对象产生在堆中
+
+- 非常简单。只需要把`operator new` 和` operator delete`声明为`private`即可。
+  - 也可以同时把`operator new[]` 和` operator delete[]`声明为`private`
+
+```c++
+struct myclass{
+
+    myclass(){
+        cout <<"myclass const" << endl;
+    }
+    ~myclass(){
+        cout <<"myclass dest" << endl;
+    }
+
+    private:
+        static void* operator new(size_t size); //私有
+        static void operator delete(void* ptr); //私有
+
+};
+
+
+struct derive: public myclass{
+    derive(){
+        cout << "derive const" << endl;
+    }
+    ~derive(){
+        cout <<"derive dest" << endl;
+    }
+
+};
+
+int main(){
+    derive obj;
+    derive* p = new derive(); //错误
+    return 0;
+}
+```
+
