@@ -44,3 +44,50 @@ mermaid: true
 ## 条款18 分期偿还预期的计算成本（超急评估）
 
 其实就是和17反过来。如果某些大概率或一定会使用的数据，尤其当这些数据使用频繁的时候，尝试设计一种数据结构进行预加载，当做一种缓存。
+
+## 条款21 考虑利用重载来避免隐式类型转换造成的临时对象。
+
+**我们在这一条中讨论的不是是否禁止隐式类型转换，主要是讨论如何降低开销。**
+
+假设我们有这样的简朴的代码：
+
+```c++
+struct myclass{
+    int val;
+    myclass(int x):val(x){
+        cout <<"const" << endl;
+    };
+};
+
+const myclass operator+(const myclass& lhs, const myclass& rhs){
+    return myclass(lhs.val + rhs.val);
+}
+int main(){
+    myclass a(20);
+    a+20;
+    20+a;
+}
+```
+
+这段代码会一共构造五次。第一次是`a`，第二次是`20`的隐式类型转换。第三次是`a+20`的返回值。第四次是`20`的隐式类型转换，第五次是`20+a`的返回值。
+
+我们此时可以**多**写出两个重载的版本。
+
+```c++
+const myclass operator+(const myclass& lhs, int rhs){
+    return myclass(lhs.val + rhs);
+}
+
+const myclass operator+(int lhs, const myclass&  rhs){
+    return myclass(lhs + rhs.val);
+}
+```
+
+之后，执行代码就只会构造三次。分别是`a`，`a+20`和`20+a`。没有隐式转换造成的临时对象的开销。
+
+## 条款22 针对操作符，考虑同时提供复合形式(+=或-=)和单独形式（+，-）
+
+主要原因是如`+=`和`-=`形式的符合操作符是直接作用于自身，所以返回的是`T&`形式。但是单独形式的操作符一般都是`const T`形式。所以显然前者效率较高。
+
+同时，应该以复合形式为基础，实现单独形式 。也就是在`operator+`内部使用`operator+=`。因为这样只需要更改`operator+=`就可以改变其行为。
+
