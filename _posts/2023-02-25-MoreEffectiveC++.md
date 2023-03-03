@@ -289,3 +289,64 @@ int main(){
 
 我们核心想法是让第一层`arr2`储存一堆的`arr1`。然后`arr2`的`operator[]`会返回对应的`arr1`对象。此时，如果链式调用，**第二个`operator[]`自然会是`arr1`的。因为当前的operator`[]`是作用在`arr2`的`operator[]`返回的`arr1`上面的那个**
 
+### 让operator[]可以区分左值和右值（不是真正区分，而是区分行为）
+
+一般来说，左值是写入行为，右值是读取行为。这个例子只能用书里的。
+
+```c++
+class String {
+public:
+    //代理类用于区分operator[]的读写操作
+    class CharProxy { // proxies for string chars
+    public:
+        CharProxy(String& str, int index); // creation
+        CharProxy& operator=(const CharProxy& rhs); // 拷贝赋值。左值运用的场景，这种适用于 s1[3] = s2[8]的场景
+        CharProxy& operator=(char c); // 拷贝赋值。左值运用的场景，这种适用于 s2[5] = 'x'的场景
+        operator char() const;  //右值运用的场景。
+    private:
+        String& theString; //用于操作String,并在适当时机开辟新内存并复制
+        int charIndex;
+    };
+    const CharProxy operator[](int index) const; // string类的 operator[]重载
+    CharProxy operator[](int index); // string类的 operator[]重载
+    ...
+    friend class CharProxy;
+private:
+    RCPtr<StringValue> value;//见条款29
+};
+```
+
+- 就像书里的例子。`s2[5] = 'x';`由于下标访问运算符重载为返回一个代理对象，所以此时的赋值会调用代理类对象的赋值。也就是`CharProxy& operator=(char c);`这个函数。这时候`s2[5]`的语义是左值。
+
+
+- 针对`s1[3] = s2[8]`这个场景，虽然我们知道`s2[8]`没有写入，应该是个右值。但是注意，因为书中String实现了写时复制，所以`operator[]`本身是无成本的。因为代理对象只保有数据的引用。随后直到调用了左侧的代理对象的`CharProxy& operator=(const CharProxy& rhs); `这个函数，这时候才开始相应的动作。所以这里我们本身无法区分左值和右值，但是我们可以从行为上区分左值和右值。
+
+
+```c++
+String::CharProxy& String::CharProxy::operator=(const CharProxy& rhs)
+{
+    if (theString.value->isShared()) {
+        theString.value = new StringValue(theString.value->data);
+    }
+    theString.value->data[charIndex] = rhs.theString.value->data[rhs.charIndex];
+    return *this;
+}
+```
+
+- 针对如`cout << s1[2];`这种场景，非常明确`s1[2]`的行为是右值行为，也就是读取行为。所以说压根没有必要做出任何的额外成本动作
+
+```c++
+String::CharProxy::operator char() const
+{
+return theString.value->data[charIndex]; //单纯的返回一个字符。这个data的类型是一个char*数组。所以这个下标访问是内置的。
+}
+```
+
+- 潜在的问题是代理类非常复杂，常常会造成语义的改变。因为目标对象和代理对象的行为常常有细微差异。比如在上文的例子中`char* p = &s[2]`就无法通过。
+  - 因为取出来的地址的类型是代理类类型。无法赋值给`char`类。由于我们目标类的`operator[]`返回的是代理类对象，所以这时候我们必须重载代理类的取地址运算符`operator&`
+
+- 但是这不能解决所有问题。假设有一个类`A`引用了上面的这个蕴含代理类的目标对象，那么直接针对这个`A`使用目标对象的`operator[]`依旧返回的是代理类对象。此时如果我们想进行函数调用，那么就会出现问题。因为取回来的并不是类`A`对象，代理类对象并没有这个特定的成员函数。所以需要在所有的函数上都进行重载让他们也适用于代理类对象。
+
+- 同时，我不知道为啥上面的目标类的`operator[]`一定要返回代理类的对象而不是代理类的引用。则此时在赋值方面会出现问题。
+
+- 最后一个问题是隐式类型转换。隐式类型转换中，每一个步骤都只能执行一次。也就是每个步骤都只能进行一个层次的转换。比如`a`可以由`int`构造，`b`可以由`a`构造。那么如果一个函数接受一个`b`类对象，可以传入`a`，但是传入`int`就不可以。
