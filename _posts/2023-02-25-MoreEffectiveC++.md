@@ -231,3 +231,61 @@ int main(){
 
 都在智能指针章节。
 
+
+
+## 条款29 引用计数
+
+大概和智能指针的引用计数理论一致。额外的就是COW相关的实现。还有就是`operator[]`的语义，这部分写在effSTL的map的`[]`部分了。
+
+
+
+## 条款 30 代理类
+
+书里的例子是尝试用别的方法实现重载`operator[][]`的语义。因为压根没有`operator[][]`。
+
+```c++
+struct arr2{
+    struct arr1{ //代理类
+        arr1() = default;
+        arr1(int x, int y):pivot(x), pivot2(y){};  //假设每个arr1拥有两个元素
+        int pivot = 20;
+        int pivot2 = 30;
+        int& operator[](size_t index){ //返回实际元素的引用，满足赋值要求。
+            cout <<"arr1 []" << endl;
+            if(index == 0){
+                return pivot;
+            }
+            else{
+                return pivot2;
+            }
+        }
+    };
+    vector<arr1> arrs{arr1(1,2),arr1(3,4), arr1(5,6)};//我们假设arr2拥有三个arr1
+    arr2() = default;
+    arr1& operator[](size_t index){ //代理operator[]，直接返回对应下标的arr1对象的引用。满足赋值要求
+        cout <<"arr2 []" << endl;
+        return arrs[index];
+    }
+};
+
+int main(){
+    arr2 obj;
+    cout << obj[2][1] << endl;
+    cout << (obj.operator[](2)).operator[](1) << endl; //等同于上面
+
+
+    obj[2][1] = 300;
+    cout << obj[2][1] << endl; //赋值也没问题
+
+    arr2::arr1 temp = obj[2]; //单独提取出第一维对象也没问题。
+    //第一个operator[]返回的是arr1对象。所以如果再次链式调用operator[]就会自然匹配到arr1的那个而不是arr2的
+    return 0;
+}
+```
+
+我们想模拟二维数组的语义，但是这里模拟的还是有问题。图一乐就行
+
+`obj[2][1]`的语义是`(obj.operator[](2)).operator[](1);`
+
+我们核心想法是让第一层`arr2`储存一堆的`arr1`。然后`arr2`的`operator[]`会返回对应的`arr1`对象。此时，如果链式调用，**第二个`operator[]`自然会是`arr1`的。因为当前的operator`[]`是作用在`arr2`的`operator[]`返回的`arr1`上面的那个**
+
