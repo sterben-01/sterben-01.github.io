@@ -350,3 +350,89 @@ return theString.value->data[charIndex]; //单纯的返回一个字符。这个d
 - 同时，我不知道为啥上面的目标类的`operator[]`一定要返回代理类的对象而不是代理类的引用。则此时在赋值方面会出现问题。
 
 - 最后一个问题是隐式类型转换。隐式类型转换中，每一个步骤都只能执行一次。也就是每个步骤都只能进行一个层次的转换。比如`a`可以由`int`构造，`b`可以由`a`构造。那么如果一个函数接受一个`b`类对象，可以传入`a`，但是传入`int`就不可以。
+
+## 条款31 让函数根据一个以上的参数类型来决定如何虚化
+
+主要讲述的是multi-dispatch。
+
+我们知道，一般来说多态是单个参数的。也就是依靠调用方的多态来决定调用哪个类的函数。那么如何实现多重派发呢？
+
+第一个方法是虚函数+RTTI。
+
+这个办法非常简陋。也就是先设计一层虚函数，然后再对应的虚函数内使用typeid判断，随后执行对应的函数。这种做法效率非常的低，并且伴随着一大堆的cast
+
+第二个方法就是只使用虚函数
+
+```c++
+struct banana; //前向声明
+struct apple;
+struct kiwi;
+
+struct fruit{ //抽象基类
+    virtual void blend(fruit* obj) = 0; //通过该函数决定每一个类的二次派发。
+    virtual void blend(banana* obj) = 0;
+    virtual void blend(apple* obj) = 0;
+    virtual void blend(kiwi* obj) = 0;
+};
+
+struct banana:fruit{
+    virtual void blend(fruit* obj){ //通过该函数决定每一个类的二次派发。
+        obj->blend(this); //注意切记不可写反写成this->blend(obj)。会造成递归调用。
+    }
+    virtual void blend(banana* obj){
+        cout <<"banana blend banana" << endl;
+    }
+    virtual void blend(apple* obj){
+        cout <<"banana blend apple" << endl;
+    }
+    virtual void blend(kiwi* obj){
+        cout <<"banana blend kiwi" << endl;
+    }
+};
+
+struct apple:fruit{
+    virtual void blend(fruit* obj){
+        obj->blend(this);
+    }
+    virtual void blend(banana* obj){
+        cout <<"apple blend banana" << endl;
+    }
+    virtual void blend(apple* obj){
+        cout <<"apple blend apple" << endl;
+    }
+    virtual void blend(kiwi* obj){
+        cout <<"apple blend kiwi" << endl;
+    }
+};
+struct kiwi:fruit{
+    virtual void blend(fruit* obj){
+        obj->blend(this);
+    }
+    virtual void blend(banana* obj){
+        cout <<"kiwi blend banana" << endl;
+
+    }
+    virtual void blend(apple* obj){
+        cout <<"kiwi blend apple" << endl;
+    }
+    virtual void blend(kiwi* obj){
+        cout <<"kiwi blend kiwi" << endl;
+    }
+};
+
+
+int main(){
+
+    fruit* o = new banana();
+
+    fruit* k = new kiwi();
+    o->blend(k); //kiwi blend banana
+
+
+    return 0;
+}
+```
+
+我们看到我们通过两层虚函数来实现两层派发。具体原理是`o->blend(k)`的`o`是第一层派发。通过`o`的动态类型决定进入对应的类。由于此时我们传入的指针类型是fruit。由于只能子转父，不能父转子，所以必须要有`void blend(fruit* obj)`这个东西帮助我们进行第二层派发。`o`的动态类型此时是`banana`，所以此时进入了`banana`的`blend`函数。在这个函数中，我们的`obj->(this)`的`obj`就是第二层派发。根据`obj`的动态类型决定进入对应的类的`blend`函数。此时`obj`的动态类型是`kiwi`。所以此时是调用了`kiwi`类的`blend`函数。同时我们知道，每个类的`this`指针的“类型”都是本类类型。因为它永远指向自己。所以此时`this`的类型是`banana`。所以最后我们调用了`kiwi`类的`banana`为参数的函数。
+
+问题在于这种方案非常的不符合设计理念。因为只要我们增加了一个对应的水果，就要修改每个类型。
