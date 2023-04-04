@@ -134,10 +134,15 @@ class myobjanother : counts<myobjanother>{
   - 声明为`protected`而不是`private`的目的是让子类可以访问析构函数。
   - 注意子类也应该将析构函数声明为`protected`，否则子类对象会被允许创建在栈上。
   - 注意杂记4中提到的自动储存期限。所以子类如果在栈上，则子类的父类部分也在栈上。子类在堆上，则子类的父类部分也在堆上。
+  - **格外注意。如果将析构函数声明为`protected`或`private`，仅意味着不可在外部调用析构函数。但是在该类的成员函数中依旧可以调用析构函数，这意味着在该类的成员函数中，我们依旧可以将对象创建在栈上。**
 - 声明一个`destroy`函数，用于调用析构函数。
   - `destroy`函数是否为`virtual`不重要，因为`delete`会调用对应的`virtual`析构函数。
 
 ```c++
+#include <string>
+#include <map>
+#include <iostream>
+using namespace std;
 struct myclass{
 
     myclass(){
@@ -146,6 +151,10 @@ struct myclass{
 
     void destroy(){
         delete this;
+    }
+
+    void myclassmemberfunction(){ //成员函数
+        myclass obj; //可以创建在栈上。因为成员函数可以访问到本类的所有成员
     }
 
     protected: //protected
@@ -162,6 +171,9 @@ struct derive: public myclass{
     void destroy(){
         delete this;
     }
+    void derivememberfunction(){ //成员函数
+        derive obj; //可以创建在栈上。因为成员函数可以访问到本类的所有成员
+    }
     protected: //protected
     ~derive(){
         cout <<"derive dest" << endl;
@@ -173,8 +185,12 @@ struct derive: public myclass{
 int main(){
 
     myclass* p = new myclass();
+
+    p->myclassmemberfunction(); //成员函数
     p->destroy();
+
     derive* pp = new derive();
+    pp->derivememberfunction(); //成员函数
     pp->destroy();
 
     myclass* ppp = new derive();
@@ -182,6 +198,9 @@ int main(){
 
     myclass pppp; 	//禁止
     derive ppppp;	//禁止
+
+
+
     return 0;
 }
 ```
