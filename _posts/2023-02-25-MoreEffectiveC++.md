@@ -260,6 +260,8 @@ int main(){
 
 ## 条款 30 代理类
 
+STL的例子是`vector<bool>`参考effective STL 19条
+
 书里的例子是尝试用别的方法实现重载`operator[][]`的语义。因为压根没有`operator[][]`。
 
 ```c++
