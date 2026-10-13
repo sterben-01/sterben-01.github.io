@@ -1,0 +1,250 @@
+---
+import type { MarkdownHeading } from "astro";
+import { Icon } from "astro-icon/components";
+import { siteConfig } from "../../config";
+import { url } from "../../utils/url-utils";
+
+interface Props {
+	headings: MarkdownHeading[];
+}
+
+let { headings = [] } = Astro.props;
+
+let minDepth = 10;
+for (const heading of headings) {
+	minDepth = Math.min(minDepth, heading.depth);
+}
+
+const isPostsRoute = Astro.url.pathname.startsWith(url("/posts/"));
+
+const removeTailingHash = (text: string) => {
+	let lastIndexOfHash = text.lastIndexOf("#");
+	if (lastIndexOfHash !== text.length - 1) {
+		return text;
+	}
+
+	return text.substring(0, lastIndexOfHash);
+};
+
+let heading1Count = 1;
+
+const maxLevel = siteConfig.toc.depth;
+const filteredHeadings = headings.filter(
+	(heading) => heading.depth < minDepth + maxLevel,
+);
+---
+<!-- Shown whenever the sidebar TOC is hidden (below 2xl). #mobile-toc is a Swup container, so it must exist on every page -->
+<div id="mobile-toc" class="2xl:hidden">
+{isPostsRoute && filteredHeadings.length > 0 &&
+<mobile-toc>
+    <div class="mobile-toc-fab fixed right-4 z-40 flex flex-col gap-3 transition">
+        <button class="mobile-toc-top-btn hide btn-card w-12 h-12 rounded-2xl shadow-lg dark:shadow-none text-[var(--primary)] active:scale-90"
+                aria-label="返回顶部">
+            <Icon name="material-symbols:keyboard-arrow-up-rounded" class="text-[2rem]"></Icon>
+        </button>
+        <button class="mobile-toc-btn btn-card w-12 h-12 rounded-2xl shadow-lg dark:shadow-none text-[var(--primary)] active:scale-90"
+                aria-label="目录" aria-haspopup="dialog" aria-expanded="false" aria-controls="mobile-toc-panel">
+            <Icon name="material-symbols:format-list-bulleted-rounded" class="text-[1.5rem]"></Icon>
+        </button>
+    </div>
+
+    <div class="mobile-toc-mask fixed inset-0 z-[100] bg-black/40 transition-opacity duration-300"></div>
+
+    <div id="mobile-toc-panel" role="dialog" aria-modal="true" aria-label="目录"
+         class="mobile-toc-panel fixed left-0 right-0 bottom-0 z-[101] mx-auto max-w-[40rem] max-h-[75vh] flex flex-col
+         rounded-t-[var(--radius-large)] bg-[var(--float-panel-bg)] shadow-xl dark:shadow-none transition-transform duration-300 ease-out"
+    >
+        <div class="mobile-toc-header shrink-0 px-4 pt-2 pb-1">
+            <div class="mx-auto w-10 h-1 rounded-full bg-black/10 dark:bg-white/10"></div>
+            <div class="flex items-center justify-between mt-2">
+                <div class="text-lg font-bold text-90 pl-2">目录</div>
+                <button class="mobile-toc-close btn-plain scale-animation rounded-lg w-9 h-9" aria-label="关闭目录">
+                    <Icon name="material-symbols:close-rounded" class="text-[1.25rem]"></Icon>
+                </button>
+            </div>
+        </div>
+        <nav class="mobile-toc-list relative overflow-y-auto overscroll-contain px-2 pb-4">
+            {filteredHeadings.map((heading) =>
+                <a href={`#${heading.slug}`} data-id={heading.slug} class="mobile-toc-entry px-2 flex gap-2 relative transition w-full min-h-9 rounded-xl
+                hover:bg-[var(--toc-btn-hover)] active:bg-[var(--toc-btn-active)] py-2"
+                >
+                    <div class:list={["transition w-5 h-5 shrink-0 rounded-lg text-xs flex items-center justify-center font-bold",
+                        {
+                            "bg-[var(--toc-badge-bg)] text-[var(--btn-content)]": heading.depth == minDepth,
+                            "ml-4": heading.depth == minDepth + 1,
+                            "ml-8": heading.depth == minDepth + 2,
+                        }
+                    ]}
+                    >
+                        {heading.depth == minDepth && heading1Count++}
+                        {heading.depth == minDepth + 1 && <div class="transition w-2 h-2 rounded-[0.1875rem] bg-[var(--toc-badge-bg)]"></div>}
+                        {heading.depth == minDepth + 2 && <div class="transition w-1.5 h-1.5 rounded-sm bg-black/5 dark:bg-white/10"></div>}
+                    </div>
+                    <div class:list={["mobile-toc-text transition text-sm", {
+                        "text-50": heading.depth == minDepth || heading.depth == minDepth + 1,
+                        "text-30": heading.depth == minDepth + 2,
+                    }]}>{removeTailingHash(heading.text)}</div>
+                </a>
+            )}
+        </nav>
+    </div>
+</mobile-toc>}
+</div>
+
+<style>
+.mobile-toc-fab {
+    bottom: calc(1.5rem + env(safe-area-inset-bottom));
+}
+.mobile-toc-top-btn.hide {
+    opacity: 0;
+    transform: scale(0.9);
+    pointer-events: none;
+}
+.mobile-toc-panel {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+/* Block page scrolling through the mask / header without touching <html> overflow, which OverlayScrollbars manages */
+.mobile-toc-mask, .mobile-toc-header {
+    touch-action: none;
+}
+mobile-toc:not(.open) .mobile-toc-mask {
+    opacity: 0;
+    pointer-events: none;
+}
+mobile-toc:not(.open) .mobile-toc-panel {
+    transform: translateY(100%);
+    visibility: hidden;
+    transition: transform 300ms ease-out, visibility 0s 300ms;
+}
+mobile-toc.open .mobile-toc-fab {
+    opacity: 0;
+    pointer-events: none;
+}
+.mobile-toc-entry.active {
+    background: var(--toc-btn-hover);
+}
+.mobile-toc-entry.active .mobile-toc-text {
+    color: var(--primary);
+    font-weight: bold;
+}
+</style>
+
+<script>
+import { BANNER_HEIGHT } from "../../constants/constants";
+
+// Distance (px) from the viewport top at which a heading counts as "reached"
+const HEADING_OFFSET = 80;
+// Gap (px) left above a heading after jumping to it
+const JUMP_OFFSET = 16;
+
+class MobileTOC extends HTMLElement {
+    btn: HTMLButtonElement | null = null;
+    topBtn: HTMLButtonElement | null = null;
+    mask: HTMLElement | null = null;
+    panel: HTMLElement | null = null;
+    list: HTMLElement | null = null;
+    entries: HTMLAnchorElement[] = [];
+
+    connectedCallback() {
+        this.btn = this.querySelector(".mobile-toc-btn");
+        this.topBtn = this.querySelector(".mobile-toc-top-btn");
+        this.mask = this.querySelector(".mobile-toc-mask");
+        this.panel = this.querySelector(".mobile-toc-panel");
+        this.list = this.querySelector(".mobile-toc-list");
+        this.entries = Array.from(this.querySelectorAll<HTMLAnchorElement>(".mobile-toc-entry"));
+
+        this.btn?.addEventListener("click", this.open);
+        this.topBtn?.addEventListener("click", this.backToTop);
+        this.mask?.addEventListener("click", this.close);
+        this.mask?.addEventListener("wheel", this.preventScroll, { passive: false });
+        this.querySelector(".mobile-toc-close")?.addEventListener("click", this.close);
+        this.list?.addEventListener("click", this.handleEntryClick);
+        document.addEventListener("keydown", this.handleKeydown);
+        window.addEventListener("scroll", this.updateTopBtn, { passive: true });
+        this.updateTopBtn();
+    };
+
+    disconnectedCallback() {
+        document.removeEventListener("keydown", this.handleKeydown);
+        window.removeEventListener("scroll", this.updateTopBtn);
+    };
+
+    // Same rule as the desktop back-to-top button: show it once the banner has been scrolled past
+    updateTopBtn = () => {
+        const bannerHeight = window.innerHeight * (BANNER_HEIGHT / 100);
+        this.topBtn?.classList.toggle("hide", window.scrollY <= bannerHeight);
+    };
+
+    backToTop = () => {
+        window.scroll({ top: 0, behavior: "smooth" });
+    };
+
+    isOpen = () => this.classList.contains("open");
+
+    open = () => {
+        this.markActiveEntry();
+        this.classList.add("open");
+        this.btn?.setAttribute("aria-expanded", "true");
+        this.querySelector<HTMLButtonElement>(".mobile-toc-close")?.focus({ preventScroll: true });
+    };
+
+    close = () => {
+        if (!this.isOpen()) return;
+        this.classList.remove("open");
+        this.btn?.setAttribute("aria-expanded", "false");
+        this.btn?.focus({ preventScroll: true });
+    };
+
+    preventScroll = (event: Event) => {
+        event.preventDefault();
+    };
+
+    handleKeydown = (event: KeyboardEvent) => {
+        if (event.key === "Escape") this.close();
+    };
+
+    markActiveEntry = () => {
+        // The active entry is the last heading that has scrolled past the top of the viewport
+        let activeIdx = -1;
+        for (let i = 0; i < this.entries.length; i++) {
+            const heading = document.getElementById(this.entries[i].dataset.id || "");
+            if (!heading) continue;
+            if (heading.getBoundingClientRect().top > HEADING_OFFSET) break;
+            activeIdx = i;
+        }
+
+        this.entries.forEach((entry, i) => entry.classList.toggle("active", i === activeIdx));
+
+        // Center the active entry in the list. Don't use scrollIntoView, which would also scroll the page
+        if (this.list) {
+            const active = this.entries[activeIdx];
+            this.list.scrollTop = active
+                ? active.offsetTop - this.list.clientHeight / 2 + active.offsetHeight / 2
+                : 0;
+        }
+    };
+
+    handleEntryClick = (event: Event) => {
+        const entry = (event.target as HTMLElement).closest<HTMLAnchorElement>(".mobile-toc-entry");
+        if (!entry) return;
+        // Handle the jump ourselves so Swup doesn't intercept the anchor link
+        event.preventDefault();
+        event.stopPropagation();
+
+        const id = entry.dataset.id || "";
+        const heading = document.getElementById(id);
+        this.close();
+        if (!heading) return;
+
+        window.scrollTo({
+            top: heading.getBoundingClientRect().top + window.scrollY - JUMP_OFFSET,
+            behavior: "smooth",
+        });
+        history.replaceState(history.state, "", `#${id}`);
+    };
+}
+
+if (!customElements.get("mobile-toc")) {
+    customElements.define("mobile-toc", MobileTOC);
+}
+</script>

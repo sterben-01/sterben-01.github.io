@@ -6,6 +6,7 @@ import SideBar from "@components/widget/SideBar.astro";
 import type { MarkdownHeading } from "astro";
 import { Icon } from "astro-icon/components";
 import ImageWrapper from "../components/misc/ImageWrapper.astro";
+import MobileTOC from "../components/widget/MobileTOC.astro";
 import TOC from "../components/widget/TOC.astro";
 import { siteConfig } from "../config";
 import {
@@ -122,4 +123,7 @@ const mainPanelTop = siteConfig.banner.enable
         {!siteConfig.toc.enable && <div id="toc"></div>}
     </div>
 </div>
+
+<!-- Floating TOC button + bottom drawer for narrower screens. Kept outside the main panel since transformed ancestors break `fixed` -->
+{siteConfig.toc.enable ? <MobileTOC headings={headings}></MobileTOC> : <div id="mobile-toc"></div>}
 </Layout>
